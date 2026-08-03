@@ -43,17 +43,9 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
     return null;
   }
 
-  let data = null;
+ if (!response.ok) {
+  throw new Error(`Erreur ${response.status}`);
+}
 
-  const contentType = response.headers.get("content-type");
-
-  if (contentType && contentType.includes("application/json")) {
-    data = await response.json();
-  }
-
-  if (!response.ok) {
-    throw new Error(data?.message || `Erreur ${response.status}`);
-  }
-
-  return data;
+return response;
 };
