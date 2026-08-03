@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { FiEye, FiEyeOff, FiMail, FiLock, FiShield } from 'react-icons/fi'
 import logoJph from '../assets/ocplogo.png'
 import { Link, useNavigate } from 'react-router-dom'
+import { API_BASE_URL } from '../api'
 
 function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
@@ -18,7 +19,7 @@ function LoginForm() {
     setLoading(true)
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
