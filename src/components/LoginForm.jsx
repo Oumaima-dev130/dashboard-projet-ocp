@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { FiEye, FiEyeOff, FiMail, FiLock, FiShield } from 'react-icons/fi'
 import logoJph from '../assets/ocplogo.png'
 import { Link, useNavigate } from 'react-router-dom'
-import { API_BASE_URL } from '../api'
+import { API_BASE_URL } from '../utils/api'
 
 function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
