@@ -2,23 +2,30 @@ import Bac from "../models/Bac.js";
 import Poste from "../models/Poste.js";
 import Attachement from "../models/Attachement.js";
 
+// GET /api/budget/data?projectId=...&bacId=...
 export const getBudgetData = async (req, res) => {
   try {
     const { projectId } = req.query;
     let { bacId } = req.query;
 
+    // =========================================================
+    // 1. Vérification du projectId
+    // =========================================================
     if (!projectId) {
-      return res.status(400).json({ message: "projectId requis" });
+      return res.status(400).json({
+        message: "projectId requis",
+      });
     }
 
-    // 1. Récupérer les Bacs du projet
-    const bacs = await Bac.find(
-      { projectId },
-      { _id: 1, nom: 1 }
-    )
+    // =========================================================
+    // 2. Récupérer les BAC du projet
+    //    Une seule requête MongoDB
+    // =========================================================
+    const bacs = await Bac.find({ projectId })
       .sort({ nom: 1 })
       .lean();
 
+    // Aucun BAC dans ce projet
     if (!bacs.length) {
       return res.json({
         bacId: null,
@@ -29,13 +36,17 @@ export const getBudgetData = async (req, res) => {
       });
     }
 
-    // 2. Si aucun Bac n'est sélectionné,
-    // prendre le premier
+    // =========================================================
+    // 3. Si aucun bacId n'est fourni,
+    //    prendre automatiquement le premier BAC
+    // =========================================================
     if (!bacId) {
       bacId = bacs[0]._id.toString();
     }
 
-    // 3. Vérifier que le Bac appartient bien au projet
+    // =========================================================
+    // 4. Vérifier que le BAC appartient bien au projet
+    // =========================================================
     const bac = bacs.find(
       (b) => b._id.toString() === bacId
     );
@@ -46,101 +57,61 @@ export const getBudgetData = async (req, res) => {
       });
     }
 
-    // 4. Récupérer les postes
-    const postes = await Poste.find(
-      { bacId },
-      {
-        _id: 1,
-        numero: 1,
-        designation: 1,
-        rubrique: 1,
-        unite: 1,
-        quantite: 1,
-        prixUnitaire: 1,
-      }
-    )
+    // =========================================================
+    // 5. Récupérer les postes du BAC
+    // =========================================================
+    const postes = await Poste.find({ bacId })
       .sort({ numero: 1 })
       .lean();
 
-    if (!postes.length) {
-      return res.json({
-        bacId,
-        bacNom: bac.nom,
-        bacs: bacs.map((b) => ({
-          _id: b._id,
-          nom: b.nom,
-        })),
-        items: [],
-        attachments: [],
-      });
-    }
-
-    // 5. IDs des postes
     const posteIds = postes.map((p) => p._id);
 
-    // 6. Récupérer tous les attachements en une seule requête
-    const attachementsDb = await Attachement.find(
-      { posteId: { $in: posteIds } },
-      {
-        _id: 1,
-        posteId: 1,
-        numero: 1,
-        pourcentage: 1,
-        montantHTManuel: 1,
-        date: 1,
-        statut: 1,
-        document: 1,
-        photos: 1,
-      }
-    )
-      .sort({ numero: 1, date: 1 })
-      .lean();
+    // =========================================================
+    // 6. Récupérer les attachements
+    // =========================================================
+    let attachementsDb = [];
 
-    // ============================================================
-    // 7. Créer une Map des attachements par poste
-    // ============================================================
-
-    const attachmentsByPoste = new Map();
-
-    for (const att of attachementsDb) {
-      const key = att.posteId.toString();
-
-      if (!attachmentsByPoste.has(key)) {
-        attachmentsByPoste.set(key, []);
-      }
-
-      attachmentsByPoste.get(key).push(att);
+    if (posteIds.length > 0) {
+      attachementsDb = await Attachement.find({
+        posteId: { $in: posteIds },
+      })
+        .sort({ numero: 1, date: 1 })
+        .lean();
     }
 
-    // ============================================================
-    // 8. Créer les groupes d'attachements par numéro
-    // ============================================================
+    // =========================================================
+    // 7. Regrouper les attachements par numéro
+    // =========================================================
+    const numeroGroups = {};
 
-    const numeroGroups = new Map();
-
-    for (const att of attachementsDb) {
-      if (!numeroGroups.has(att.numero)) {
-        numeroGroups.set(att.numero, []);
+    attachementsDb.forEach((att) => {
+      if (!numeroGroups[att.numero]) {
+        numeroGroups[att.numero] = [];
       }
 
-      numeroGroups.get(att.numero).push(att);
-    }
+      numeroGroups[att.numero].push(att);
+    });
 
-    // ============================================================
-    // 9. Construire la liste globale des attachments
-    // ============================================================
+    // =========================================================
+    // 8. Construire la liste des attachements
+    // =========================================================
+    const attachments = Object.keys(numeroGroups)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map((numero) => {
+        const group = numeroGroups[numero];
 
-    const attachments = Array.from(numeroGroups.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([numero, group]) => {
         const dates = group
           .map((a) => a.date)
-          .filter(Boolean)
-          .map((d) => new Date(d).getTime());
+          .filter(Boolean);
 
         const earliestDate =
           dates.length > 0
-            ? new Date(Math.min(...dates))
+            ? new Date(
+                Math.min(
+                  ...dates.map((d) => new Date(d))
+                )
+              )
             : null;
 
         const allRealise = group.every(
@@ -152,24 +123,31 @@ export const getBudgetData = async (req, res) => {
           numero,
           name: `Attachement ${numero}`,
           date: earliestDate,
-          status: allRealise
-            ? "realise"
-            : "planned",
+          status: allRealise ? "realise" : "planned",
         };
       });
 
-    // ============================================================
-    // 10. Liste des numéros d'attachements
-    // ============================================================
+    // =========================================================
+    // 9. Créer une Map des attachements par poste
+    //    Cela évite de refaire .filter() plusieurs fois
+    // =========================================================
+    const attachmentsByPoste = new Map();
 
-    const attachmentNumbers = attachments.map(
-      (att) => att.numero
-    );
+    for (const att of attachementsDb) {
+      const posteKey = att.posteId.toString();
 
-    // ============================================================
-    // 11. Construire les items rapidement
-    // ============================================================
+      if (!attachmentsByPoste.has(posteKey)) {
+        attachmentsByPoste.set(posteKey, new Map());
+      }
 
+      attachmentsByPoste
+        .get(posteKey)
+        .set(att.numero, att);
+    }
+
+    // =========================================================
+    // 10. Construire les items du budget
+    // =========================================================
     const items = postes.map((poste) => {
       const budgetHT =
         (poste.quantite || 0) *
@@ -178,78 +156,83 @@ export const getBudgetData = async (req, res) => {
       const posteAttachements =
         attachmentsByPoste.get(
           poste._id.toString()
-        ) || [];
-
-      // Map des attachements du poste par numéro
-      const attachementByNumero = new Map();
-
-      for (const att of posteAttachements) {
-        attachementByNumero.set(
-          att.numero,
-          att
-        );
-      }
+        ) || new Map();
 
       const percentages = {};
       const attachementIds = {};
       const realise = {};
 
-      for (const numero of attachmentNumbers) {
-        const att = attachementByNumero.get(numero);
-        const attId = `att-${numero}`;
+      // -------------------------------------------------------
+      // Pour chaque attachement
+      // -------------------------------------------------------
+      attachments.forEach((att) => {
+        const match = posteAttachements.get(
+          att.numero
+        );
 
-        attachementIds[attId] = att
-          ? att._id.toString()
+        attachementIds[att.id] = match
+          ? match._id.toString()
           : null;
 
-        realise[attId] = att
-          ? att.statut === "realise"
+        realise[att.id] = match
+          ? match.statut === "realise"
           : false;
 
-        if (!att) {
-          percentages[attId] = 0;
-          continue;
+        // Aucun attachement pour ce poste
+        if (!match) {
+          percentages[att.id] = 0;
+          return;
         }
 
-        if (att.pourcentage != null) {
-          percentages[attId] =
-            att.pourcentage / 100;
-        } else if (
-          att.montantHTManuel != null &&
+        // Pourcentage renseigné
+        if (match.pourcentage != null) {
+          percentages[att.id] =
+            match.pourcentage / 100;
+        }
+
+        // Montant manuel renseigné
+        else if (
+          match.montantHTManuel != null &&
           budgetHT > 0
         ) {
-          percentages[attId] = Math.min(
-            att.montantHTManuel / budgetHT,
+          percentages[att.id] = Math.min(
+            match.montantHTManuel / budgetHT,
             1
           );
-        } else {
-          percentages[attId] = 0;
         }
-      }
 
+        // Aucun montant
+        else {
+          percentages[att.id] = 0;
+        }
+      });
+
+      // -------------------------------------------------------
       // Documents
+      // -------------------------------------------------------
       const documents = [];
 
-      for (const att of posteAttachements) {
-        if (att.document) {
+      for (const a of posteAttachements.values()) {
+        if (a.document) {
           documents.push({
-            name: `Att. ${att.numero} - document`,
-            url: att.document,
-            uploadedAt: att.date,
+            name: `Att. ${a.numero} - document`,
+            url: a.document,
+            uploadedAt: a.date,
           });
         }
 
-        if (Array.isArray(att.photos)) {
-          att.photos.forEach((photo, index) => {
-            documents.push({
-              name: `Att. ${att.numero} - photo ${index + 1}`,
-              url: photo,
-              uploadedAt: att.date,
-            });
+        (a.photos || []).forEach((photo, i) => {
+          documents.push({
+            name: `Att. ${a.numero} - photo ${i + 1}`,
+            url: photo,
+            uploadedAt: a.date,
           });
-        }
+        });
       }
 
+      // -------------------------------------------------------
+      // Objet final du poste
+      // -------------------------------------------------------
       return {
         _id: poste._id,
         name: poste.designation,
@@ -265,10 +248,9 @@ export const getBudgetData = async (req, res) => {
       };
     });
 
-    // ============================================================
-    // 12. Réponse
-    // ============================================================
-
+    // =========================================================
+    // 11. Réponse finale
+    // =========================================================
     return res.json({
       bacId,
       bacNom: bac.nom,
@@ -280,7 +262,10 @@ export const getBudgetData = async (req, res) => {
       attachments,
     });
   } catch (err) {
-    console.error("❌ getBudgetData:", err);
+    console.error(
+      "❌ Erreur getBudgetData:",
+      err
+    );
 
     return res.status(500).json({
       message:
