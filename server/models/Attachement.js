@@ -7,8 +7,11 @@ import mongoose from "mongoose";
 // unitaire ou la quantité du poste changent après coup.
 const attachementSchema = new mongoose.Schema(
   {
-    posteId: { type: mongoose.Schema.Types.ObjectId, ref: "Poste", required: true, index: true },
-    numero: { type: Number, required: true },
+posteId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Poste",
+  required: true,
+},    numero: { type: Number, required: true },
     pourcentage: { type: Number, default: null }, // 0..100, prioritaire sur montantHTManuel
     montantHTManuel: { type: Number, default: null }, // saisie alternative si % non utilisé
     date: { type: Date, required: true },
@@ -19,6 +22,6 @@ const attachementSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+attachementSchema.index({ posteId: 1, numero: 1, date: 1 });
 const Attachement = mongoose.model("Attachement", attachementSchema);
 export default Attachement;
