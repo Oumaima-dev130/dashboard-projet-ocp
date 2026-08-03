@@ -1,5 +1,5 @@
 export const API_BASE_URL =
-  "https://dashboard-projet-ocp-production-cd76.up.railway.app/api";
+  "https://dashboard-projet-ocp-production.up.railway.app";
 
 export const SERVER_BASE_URL =
   "https://dashboard-projet-ocp-production-cd76.up.railway.app";
