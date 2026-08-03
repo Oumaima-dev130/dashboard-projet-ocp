@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { FiMail, FiShield } from 'react-icons/fi'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
 import logoJph from '../assets/ocplogo.png'
-
+import { API_BASE_URL } from '../utils/api'
 function VerifyEmailForm() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -59,7 +59,7 @@ function VerifyEmailForm() {
     setLoading(true)
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/verify-email', {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code: fullCode }),
@@ -87,7 +87,7 @@ function VerifyEmailForm() {
     setResending(true)
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/resend-code', {
+      const response = await fetch(`${API_BASE_URL}/auth/resend-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

@@ -23,15 +23,16 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
   const isFormData = options.body instanceof FormData;
 
   const headers = {
-    Authorization: token ? `Bearer ${token}` : "",
-    ...options.headers,
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
   };
 
-  if (!isFormData) {
-    headers["Content-Type"] = "application/json";
-  }
+  const url = endpoint.startsWith("http")
+    ? endpoint
+    : `${API_BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(url, {
     ...options,
     headers,
   });
@@ -42,5 +43,17 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
     return null;
   }
 
-  return response;
+  let data = null;
+
+  const contentType = response.headers.get("content-type");
+
+  if (contentType && contentType.includes("application/json")) {
+    data = await response.json();
+  }
+
+  if (!response.ok) {
+    throw new Error(data?.message || `Erreur ${response.status}`);
+  }
+
+  return data;
 };
