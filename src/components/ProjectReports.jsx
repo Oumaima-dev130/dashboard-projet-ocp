@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { FiFileText, FiPlus, FiTrash2, FiX, FiPaperclip, FiDownload } from 'react-icons/fi'
-import { fetchWithAuth, SERVER_BASE_URL } from '../utils/api'
+import { fetchWithAuth } from '../utils/api'
 
 function formatDate(dateStr) {
   if (!dateStr) return '—'
@@ -169,7 +169,7 @@ function ProjectReports({ projectId }) {
               </div>
               {r.file?.path && (
   <a
-    href={`${SERVER_BASE_URL}/uploads/${r.file.path}`}
+    href={r.file.path}
     target="_blank"
     rel="noopener noreferrer"
     className="project-report-file-link"

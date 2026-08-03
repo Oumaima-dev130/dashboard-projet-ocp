@@ -1,9 +1,8 @@
 import express from "express";
-import fs from "fs";
-import path from "path";
+import { v2 as cloudinary } from "cloudinary";
 import Report from "../models/Report.js";
 import authMiddleware from "../middleware/authMiddleware.js";
-import upload, { uploadsDir } from "../middleware/upload.js";
+import upload from "../middleware/upload.js";
 
 const router = express.Router();
 
@@ -29,12 +28,20 @@ router.post("/", authMiddleware, upload.single("file"), async (req, res) => {
     const { projectId, description, date } = req.body;
 
     if (!projectId) {
-      if (req.file) fs.unlinkSync(req.file.path);
+      if (req.file) {
+        await cloudinary.uploader.destroy(req.file.filename, {
+          resource_type: req.file.mimetype === "application/pdf" ? "raw" : "image",
+        });
+      }
       return res.status(400).json({ message: "projectId requis" });
     }
 
     if (!description || !date) {
-      if (req.file) fs.unlinkSync(req.file.path);
+      if (req.file) {
+        await cloudinary.uploader.destroy(req.file.filename, {
+          resource_type: req.file.mimetype === "application/pdf" ? "raw" : "image",
+        });
+      }
       return res.status(400).json({ message: "La description et la date sont requises" });
     }
 
@@ -42,10 +49,10 @@ router.post("/", authMiddleware, upload.single("file"), async (req, res) => {
 
     if (req.file) {
       reportData.file = {
-        filename: req.file.filename,
+        filename: req.file.filename, // public_id Cloudinary (nécessaire pour la suppression)
         originalName: req.file.originalname,
         mimetype: req.file.mimetype,
-        path: req.file.filename,
+        path: req.file.path, // URL Cloudinary complète
       };
     }
 
@@ -66,11 +73,10 @@ router.delete("/:id", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Rapport introuvable" });
     }
 
-    if (report.file?.path) {
-      const filePath = path.join(uploadsDir, report.file.path);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+    if (report.file?.filename) {
+      await cloudinary.uploader.destroy(report.file.filename, {
+        resource_type: report.file.mimetype === "application/pdf" ? "raw" : "image",
+      });
     }
 
     await Report.findByIdAndDelete(req.params.id);

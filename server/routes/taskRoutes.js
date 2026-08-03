@@ -1,9 +1,8 @@
 import express from "express";
-import fs from "fs";
-import path from "path";
+import { v2 as cloudinary } from "cloudinary";
 import Task from "../models/Task.js";
 import authMiddleware from "../middleware/authMiddleware.js";
-import upload, { uploadsDir } from "../middleware/upload.js";
+import upload from "../middleware/upload.js";
 
 const router = express.Router();
 
@@ -103,6 +102,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
   }
 });
 
+// Upload d'un document sur une tâche (stockage Cloudinary)
 router.post("/:id/documents", authMiddleware, upload.single("document"), async (req, res) => {
   try {
     if (!req.file) {
@@ -111,15 +111,18 @@ router.post("/:id/documents", authMiddleware, upload.single("document"), async (
 
     const task = await Task.findById(req.params.id);
     if (!task) {
-      fs.unlinkSync(req.file.path);
+      // Le fichier a déjà été envoyé sur Cloudinary : on le supprime pour ne pas laisser d'orphelin
+      await cloudinary.uploader.destroy(req.file.filename, {
+        resource_type: req.file.mimetype === "application/pdf" ? "raw" : "image",
+      });
       return res.status(404).json({ message: "Tâche introuvable" });
     }
 
     task.documents.push({
-      filename: req.file.filename,
+      filename: req.file.filename, // public_id Cloudinary (nécessaire pour la suppression)
       originalName: req.file.originalname,
       mimetype: req.file.mimetype,
-      path: req.file.filename,
+      path: req.file.path, // URL Cloudinary complète, utilisable directement par le frontend
     });
 
     await task.save();
@@ -130,6 +133,7 @@ router.post("/:id/documents", authMiddleware, upload.single("document"), async (
   }
 });
 
+// Suppression d'un document (Cloudinary)
 router.delete("/:id/documents/:docId", authMiddleware, async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
@@ -142,10 +146,9 @@ router.delete("/:id/documents/:docId", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Document introuvable" });
     }
 
-    const filePath = path.join(uploadsDir, doc.path);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+    await cloudinary.uploader.destroy(doc.filename, {
+      resource_type: doc.mimetype === "application/pdf" ? "raw" : "image",
+    });
 
     doc.deleteOne();
     await task.save();
@@ -164,12 +167,13 @@ router.delete("/:id", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Tâche introuvable" });
     }
 
-    (task.documents || []).forEach((doc) => {
-      const filePath = path.join(uploadsDir, doc.path);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    });
+    await Promise.all(
+      (task.documents || []).map((doc) =>
+        cloudinary.uploader.destroy(doc.filename, {
+          resource_type: doc.mimetype === "application/pdf" ? "raw" : "image",
+        })
+      )
+    );
 
     await Task.findByIdAndDelete(req.params.id);
 

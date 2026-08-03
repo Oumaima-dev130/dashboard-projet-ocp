@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { fetchWithAuth } from '../utils/api'
 
 const ProjectContext = createContext(null)
@@ -93,17 +93,33 @@ export function ProjectProvider({ children }) {
 
   const currentProject = projects.find((p) => p._id === currentProjectId) || null
 
-  const value = {
-    projects,
-    currentProject,
-    currentProjectId,
-    loading,
-    error,
-    selectProject,
-    createProject,
-    deleteProject,
-    refreshProjects: loadProjects,
-  }
+  // useMemo : évite de recréer un nouvel objet `value` à chaque render du
+  // Provider, ce qui évite de re-render tous les consommateurs de
+  // useProject() qui ne sont pas concernés par le changement.
+  const value = useMemo(
+    () => ({
+      projects,
+      currentProject,
+      currentProjectId,
+      loading,
+      error,
+      selectProject,
+      createProject,
+      deleteProject,
+      refreshProjects: loadProjects,
+    }),
+    [
+      projects,
+      currentProject,
+      currentProjectId,
+      loading,
+      error,
+      selectProject,
+      createProject,
+      deleteProject,
+      loadProjects,
+    ]
+  )
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>
 }

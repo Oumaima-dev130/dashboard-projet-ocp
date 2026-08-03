@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { FiPaperclip, FiFile, FiImage, FiX, FiLoader } from 'react-icons/fi'
-import { fetchWithAuth, SERVER_BASE_URL } from '../utils/api'
+import { fetchWithAuth } from '../utils/api'
 
 function DocumentIcon({ mimetype }) {
   if (mimetype === 'application/pdf') {
@@ -96,7 +96,7 @@ function TaskDocuments({ task, onUpdated }) {
         {(task.documents || []).map((doc) => (
           <span key={doc._id} className="task-document-chip">
             <a
-              href={`${SERVER_BASE_URL}/uploads/${doc.path}`}
+              href={doc.path}
               target="_blank"
               rel="noopener noreferrer"
               className="task-document-link"

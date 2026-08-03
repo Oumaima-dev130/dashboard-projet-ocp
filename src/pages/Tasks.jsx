@@ -112,6 +112,41 @@ function Tasks() {
     setTasks((prev) => prev.map((t) => (t._id === updatedTask._id ? updatedTask : t)))
   }
 
+  // Mise à jour optimiste de l'effectif pendant la frappe : on met à jour
+  // l'affichage tout de suite, sans attendre le serveur.
+  const handleEffectifChange = (taskId, value) => {
+    setTasks((prev) =>
+      prev.map((t) => (t._id === taskId ? { ...t, effectif: value } : t))
+    )
+  }
+
+  // Sauvegarde vers le backend uniquement quand l'utilisateur quitte le champ
+  // (onBlur), pour ne pas envoyer une requête à chaque caractère tapé.
+  const handleEffectifSave = async (task, rawValue) => {
+    const numericValue = rawValue === '' ? null : Number(rawValue)
+    if (numericValue !== null && (Number.isNaN(numericValue) || numericValue < 0)) return
+    if (numericValue === task.effectif) return
+
+    try {
+      const response = await fetchWithAuth(`/tasks/${task._id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ effectif: numericValue }),
+      })
+      if (!response) return
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.message || "Erreur lors de la mise à jour de l'effectif")
+        return
+      }
+
+      handleTaskUpdated(data)
+    } catch (err) {
+      setError('Impossible de contacter le serveur')
+    }
+  }
+
   const handleDeleteConfirm = async () => {
     if (!deletingTask) return
     setIsDeleting(true)
@@ -224,6 +259,7 @@ function Tasks() {
                 <th>Fin prévue</th>
                 <th>Fin réelle</th>
                 <th>Pondération</th>
+                <th>Effectif</th>
                 <th>Statut</th>
                 <th></th>
               </tr>
@@ -249,6 +285,19 @@ function Tasks() {
                   <td>{formatDate(task.dateFin)}</td>
                   <td>{formatDate(task.dateFinReelle)}</td>
                   <td>{task.ponderation != null ? `${(task.ponderation * 100).toFixed(0)}%` : '—'}</td>
+                  <td>
+                    <input
+                      type="number"
+                      min="0"
+                      className="tasks-effectif-input"
+                      value={task.effectif ?? ''}
+                      placeholder="—"
+                      onChange={(e) => handleEffectifChange(task._id, e.target.value === '' ? '' : Number(e.target.value))}
+                      onBlur={(e) => handleEffectifSave(task, e.target.value)}
+                      style={{ width: 64 }}
+                      aria-label="Effectif"
+                    />
+                  </td>
                   <td>
                     <StatusBadge status={getStatus(task)} />
                   </td>
