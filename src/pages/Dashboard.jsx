@@ -26,7 +26,8 @@ function Dashboard() {
         if (!response) return
 
         const data = await response.json()
-
+console.log('📦 TASKS RESPONSE:', data)
+console.log('📊 IS ARRAY:', Array.isArray(data))
         if (!response.ok) {
           setError(data.message || 'Erreur lors du chargement des tâches')
           setLoading(false)
@@ -35,10 +36,11 @@ function Dashboard() {
 
         setTasks(data)
         setLoading(false)
-      } catch (err) {
-        setError('Impossible de contacter le serveur')
-        setLoading(false)
-      }
+     } catch (err) {
+  console.error('❌ ERREUR DASHBOARD:', err)
+  setError(`Erreur: ${err.message}`)
+  setLoading(false)
+}
     }
 
     loadTasks()
