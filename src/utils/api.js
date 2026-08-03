@@ -1,8 +1,5 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://dashboard-projet-ocp-production-cd76.up.railway.app/api";
-
-export const SERVER_BASE_URL = API_BASE_URL.replace("/api", "");
+const API_BASE_URL = "http://localhost:5000/api";
+export const SERVER_BASE_URL = "http://localhost:5000";
 
 export const getToken = () => localStorage.getItem("token");
 
