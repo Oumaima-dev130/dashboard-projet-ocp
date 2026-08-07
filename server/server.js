@@ -1,8 +1,6 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
 
 import connectDB from "./config/db.js";
 
@@ -15,38 +13,27 @@ import projectRoutes from "./routes/projectRoutes.js";
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
+
+const FRONTEND_URL =
+  "https://dashboard-projet-ocp-production-cd76.up.railway.app";
 
 /* =========================
    CORS
 ========================= */
 
-const allowedOrigins = [
-  "https://dashboard-projet-ocp-production-cd76.up.railway.app",
-  "http://localhost:5173",
-];
+const corsOptions = {
+  origin: FRONTEND_URL,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: false,
+  optionsSuccessStatus: 204,
+};
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Autoriser les requêtes sans origin
-      // (ex: Postman, certains outils serveur)
-      if (!origin) {
-        return callback(null, true);
-      }
+app.use(cors(corsOptions));
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-  })
-);
+// Autoriser explicitement les requêtes OPTIONS
+app.options("*", cors(corsOptions));
 
 /* =========================
    MIDDLEWARES
@@ -92,6 +79,7 @@ app.use((err, req, res, next) => {
   console.error("❌ ERREUR SERVEUR :", err);
 
   res.status(500).json({
+    success: false,
     message: err.message || "Erreur serveur",
   });
 });

@@ -88,73 +88,78 @@ function VerifyEmailForm() {
   ========================= */
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+  e.preventDefault();
 
-    setError('')
-    setSuccess('')
+  setError("");
+  setSuccess("");
 
-    const fullCode = code.join('')
+  const fullCode = code.join("");
 
-    if (fullCode.length !== 6) {
-      setError(
-        'Veuillez saisir les 6 chiffres du code'
-      )
-      return
-    }
+  if (fullCode.length !== 6) {
+    setError("Veuillez saisir les 6 chiffres du code");
+    return;
+  }
 
-    if (!email) {
-      setError(
-        'Adresse e-mail introuvable. Veuillez recommencer l’inscription.'
-      )
-      return
-    }
+  if (!email) {
+    setError(
+      "Adresse e-mail introuvable. Veuillez recommencer l'inscription."
+    );
+    return;
+  }
 
-    setLoading(true)
+  setLoading(true);
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/auth/verify-email`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          code: fullCode,
+        }),
+      }
+    );
+
+    let data = {};
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/auth/verify-email`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email,
-            code: fullCode,
-          }),
-        }
-      )
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(
-          data.message || 'Code invalide'
-        )
-        return
-      }
-
-      setSuccess(
-        'Compte vérifié avec succès ! Redirection...'
-      )
-
-      setTimeout(() => {
-        navigate('/login')
-      }, 1500)
-    } catch (err) {
-      console.error(
-        '❌ ERREUR VERIFICATION EMAIL:',
-        err
-      )
-
-      setError(
-        'Impossible de contacter le serveur'
-      )
-    } finally {
-      setLoading(false)
+      data = await response.json();
+    } catch {
+      data = {};
     }
+
+    console.log("VERIFY STATUS :", response.status);
+    console.log("VERIFY RESPONSE :", data);
+
+    if (!response.ok) {
+      setError(
+        data.message ||
+          `Erreur serveur (${response.status})`
+      );
+      return;
+    }
+
+    setSuccess(
+      "Compte vérifié avec succès ! Redirection..."
+    );
+
+    setTimeout(() => {
+      navigate("/login");
+    }, 1500);
+  } catch (err) {
+    console.error("❌ ERREUR VERIFICATION EMAIL :", err);
+
+    setError(
+      "Impossible de contacter le serveur."
+    );
+  } finally {
+    setLoading(false);
   }
+};
 
   /* =========================
      RENVOYER LE CODE

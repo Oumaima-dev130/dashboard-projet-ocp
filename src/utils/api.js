@@ -4,14 +4,25 @@ export const API_BASE_URL =
 export const SERVER_BASE_URL =
   "https://dashboard-projet-ocp-production.up.railway.app";
 
-export const getToken = () => localStorage.getItem("token");
+export const getToken = () => {
+  return localStorage.getItem("token");
+};
 
 export const getUser = () => {
   const user = localStorage.getItem("user");
-  return user ? JSON.parse(user) : null;
+
+  if (!user) return null;
+
+  try {
+    return JSON.parse(user);
+  } catch {
+    return null;
+  }
 };
 
-export const isAuthenticated = () => Boolean(getToken());
+export const isAuthenticated = () => {
+  return Boolean(getToken());
+};
 
 export const logout = () => {
   localStorage.removeItem("token");
@@ -20,17 +31,30 @@ export const logout = () => {
 
 export const fetchWithAuth = async (endpoint, options = {}) => {
   const token = getToken();
+
   const isFormData = options.body instanceof FormData;
 
   const headers = {
-    ...(isFormData ? {} : { "Content-Type": "application/json" }),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(isFormData
+      ? {}
+      : {
+          "Content-Type": "application/json",
+        }),
+
+    ...(token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : {}),
+
     ...(options.headers || {}),
   };
 
   const url = endpoint.startsWith("http")
     ? endpoint
-    : `${API_BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
+    : `${API_BASE_URL}${
+        endpoint.startsWith("/") ? endpoint : `/${endpoint}`
+      }`;
 
   const response = await fetch(url, {
     ...options,
@@ -43,9 +67,18 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
     return null;
   }
 
- if (!response.ok) {
-  throw new Error(`Erreur ${response.status}`);
-}
+  if (!response.ok) {
+    let message = `Erreur ${response.status}`;
 
-return response;
+    try {
+      const data = await response.json();
+      message = data?.message || message;
+    } catch {
+      // réponse non JSON
+    }
+
+    throw new Error(message);
+  }
+
+  return response;
 };

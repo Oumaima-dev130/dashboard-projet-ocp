@@ -17,53 +17,93 @@ function SignupForm() {
 
   const navigate = useNavigate()
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (password !== confirmPassword) {
-      setError('Les mots de passe ne correspondent pas')
-      return
-    }
+  setError("");
 
-    if (!acceptTerms) {
-      setError("Vous devez accepter les conditions d'utilisation")
-      return
-    }
+  if (!fullName.trim()) {
+    setError("Veuillez saisir votre nom complet");
+    return;
+  }
 
-    setLoading(true)
+  if (!email.trim()) {
+    setError("Veuillez saisir votre adresse e-mail");
+    return;
+  }
+
+  if (password.length < 6) {
+    setError("Le mot de passe doit contenir au moins 6 caractères");
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    setError("Les mots de passe ne correspondent pas");
+    return;
+  }
+
+  if (!acceptTerms) {
+    setError("Vous devez accepter les conditions d'utilisation");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fullName: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+      }),
+    });
+
+    let data = {};
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fullName,
-          email,
-          password,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.message || 'Une erreur est survenue')
-        setLoading(false)
-        return
-      }
-
-      navigate('/verify-email', {
-        state: { email },
-      })
-    } catch (err) {
-      console.error('❌ ERREUR REGISTER:', err)
-      setError('Impossible de contacter le serveur')
-    } finally {
-      setLoading(false)
+      data = await response.json();
+    } catch {
+      data = {};
     }
+
+    console.log("REGISTER STATUS :", response.status);
+    console.log("REGISTER RESPONSE :", data);
+
+    if (response.status === 409) {
+      setError(
+        data.message ||
+          "Cette adresse e-mail est déjà utilisée."
+      );
+      return;
+    }
+
+    if (!response.ok) {
+      setError(
+        data.message ||
+          `Erreur serveur (${response.status})`
+      );
+      return;
+    }
+
+    navigate("/verify-email", {
+      state: {
+        email: email.trim().toLowerCase(),
+      },
+    });
+  } catch (err) {
+    console.error("❌ ERREUR REGISTER :", err);
+
+    setError(
+      "Impossible de contacter le serveur. Vérifiez que l'API est disponible."
+    );
+  } finally {
+    setLoading(false);
   }
+};
 
   return (
     <div className="auth-card fade-in">
