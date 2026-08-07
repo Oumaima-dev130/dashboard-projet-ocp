@@ -16,43 +16,46 @@ function SignupForm() {
 
   const navigate = useNavigate()
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
+const handleSubmit = async (e) => {
+  e.preventDefault()
+  setError('')
 
-    if (password !== confirmPassword) {
-      setError('Les mots de passe ne correspondent pas')
-      return
-    }
-
-    if (!acceptTerms) {
-      setError("Vous devez accepter les conditions d'utilisation")
-      return
-    }
-
-    setLoading(true)
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, email, password }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.message || 'Une erreur est survenue')
-        setLoading(false)
-        return
-      }
-
-      navigate('/verify-email', { state: { email } })
-    } catch (err) {
-      setError('Impossible de contacter le serveur')
-      setLoading(false)
-    }
+  if (password !== confirmPassword) {
+    setError('Les mots de passe ne correspondent pas')
+    return
   }
+
+  if (!acceptTerms) {
+    setError("Vous devez accepter les conditions d'utilisation")
+    return
+  }
+
+  setLoading(true)
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fullName, email, password }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      setError(data.message || 'Une erreur est survenue')
+      setLoading(false)
+      return
+    }
+
+    localStorage.setItem('token', data.token)
+    localStorage.setItem('user', JSON.stringify(data.user))
+
+    navigate('/dashboard')
+  } catch (err) {
+    setError('Impossible de contacter le serveur')
+    setLoading(false)
+  }
+}
 
   return (
     <div className="auth-card fade-in">
