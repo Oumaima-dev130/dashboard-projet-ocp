@@ -2,8 +2,9 @@ import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false,
+  requireTLS: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -16,8 +17,8 @@ export const sendVerificationEmail = async (to, code) => {
     to,
     subject: "Vérification de votre compte OCP",
     html: `
-      <div style="font-family: Arial, sans-serif; padding: 24px;">
-        <h2 style="color: #00954a;">Bienvenue sur la plateforme OCP</h2>
+      <div>
+        <h2>Bienvenue sur la plateforme OCP</h2>
 
         <p>Voici votre code de vérification :</p>
 
