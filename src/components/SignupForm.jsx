@@ -3,6 +3,7 @@ import { FiEye, FiEyeOff, FiMail, FiLock, FiUser, FiShield } from 'react-icons/f
 import logoJph from '../assets/ocplogo.png'
 import { Link, useNavigate } from 'react-router-dom'
 import { API_BASE_URL } from '../utils/api'
+
 function SignupForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -35,8 +36,14 @@ function SignupForm() {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, email, password }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName,
+          email,
+          password,
+        }),
       })
 
       const data = await response.json()
@@ -47,9 +54,13 @@ function SignupForm() {
         return
       }
 
-      navigate('/verify-email', { state: { email } })
+      navigate('/verify-email', {
+        state: { email },
+      })
     } catch (err) {
+      console.error('❌ ERREUR REGISTER:', err)
       setError('Impossible de contacter le serveur')
+    } finally {
       setLoading(false)
     }
   }
@@ -57,21 +68,39 @@ function SignupForm() {
   return (
     <div className="auth-card fade-in">
       <div className="logo-container">
-        <img src={logoJph} alt="Logo JPH" className="logo-jph" />
+        <img
+          src={logoJph}
+          alt="Logo JPH"
+          className="logo-jph"
+        />
       </div>
 
       <h1 className="welcome-title">
         Créer un <span className="highlight-green">compte</span>
       </h1>
+
       <br />
 
-      {error && <p className="form-error">{error}</p>}
+      {error && (
+        <p className="form-error">
+          {error}
+        </p>
+      )}
 
-      <form className="login-form" onSubmit={handleSubmit} noValidate>
+      <form
+        className="login-form"
+        onSubmit={handleSubmit}
+        noValidate
+      >
+        {/* NOM COMPLET */}
         <div className="form-group">
-          <label htmlFor="fullName">Nom complet</label>
+          <label htmlFor="fullName">
+            Nom complet
+          </label>
+
           <div className="input-wrapper">
             <FiUser className="input-icon" />
+
             <input
               type="text"
               id="fullName"
@@ -85,10 +114,15 @@ function SignupForm() {
           </div>
         </div>
 
+        {/* EMAIL */}
         <div className="form-group">
-          <label htmlFor="email">Adresse e-mail</label>
+          <label htmlFor="email">
+            Adresse e-mail
+          </label>
+
           <div className="input-wrapper">
             <FiMail className="input-icon" />
+
             <input
               type="email"
               id="email"
@@ -102,10 +136,15 @@ function SignupForm() {
           </div>
         </div>
 
+        {/* MOT DE PASSE */}
         <div className="form-group">
-          <label htmlFor="password">Mot de passe</label>
+          <label htmlFor="password">
+            Mot de passe
+          </label>
+
           <div className="input-wrapper">
             <FiLock className="input-icon" />
+
             <input
               type={showPassword ? 'text' : 'password'}
               id="password"
@@ -116,57 +155,100 @@ function SignupForm() {
               autoComplete="new-password"
               required
             />
+
             <button
               type="button"
               className="toggle-password"
-              onClick={() => setShowPassword(!showPassword)}
-              aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+              onClick={() =>
+                setShowPassword(!showPassword)
+              }
+              aria-label={
+                showPassword
+                  ? 'Masquer le mot de passe'
+                  : 'Afficher le mot de passe'
+              }
             >
               {showPassword ? <FiEyeOff /> : <FiEye />}
             </button>
           </div>
         </div>
 
+        {/* CONFIRMATION MOT DE PASSE */}
         <div className="form-group">
-          <label htmlFor="confirmPassword">Confirmer le mot de passe</label>
+          <label htmlFor="confirmPassword">
+            Confirmer le mot de passe
+          </label>
+
           <div className="input-wrapper">
             <FiLock className="input-icon" />
+
             <input
-              type={showConfirmPassword ? 'text' : 'password'}
+              type={
+                showConfirmPassword
+                  ? 'text'
+                  : 'password'
+              }
               id="confirmPassword"
               name="confirmPassword"
               placeholder="Confirmer votre mot de passe"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) =>
+                setConfirmPassword(e.target.value)
+              }
               autoComplete="new-password"
               required
             />
+
             <button
               type="button"
               className="toggle-password"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              aria-label={showConfirmPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+              onClick={() =>
+                setShowConfirmPassword(
+                  !showConfirmPassword
+                )
+              }
+              aria-label={
+                showConfirmPassword
+                  ? 'Masquer le mot de passe'
+                  : 'Afficher le mot de passe'
+              }
             >
-              {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+              {showConfirmPassword ? (
+                <FiEyeOff />
+              ) : (
+                <FiEye />
+              )}
             </button>
           </div>
         </div>
 
+        {/* CONDITIONS */}
         <div className="form-options">
           <label className="checkbox-wrapper">
             <input
               type="checkbox"
               checked={acceptTerms}
-              onChange={(e) => setAcceptTerms(e.target.checked)}
+              onChange={(e) =>
+                setAcceptTerms(e.target.checked)
+              }
               required
             />
+
             <span className="checkbox-custom"></span>
+
             J'accepte les conditions d'utilisation
           </label>
         </div>
 
-        <button type="submit" className="submit-btn" disabled={loading}>
-          {loading ? 'Création en cours...' : 'Créer un compte'}
+        {/* BOUTON */}
+        <button
+          type="submit"
+          className="submit-btn"
+          disabled={loading}
+        >
+          {loading
+            ? 'Création en cours...'
+            : 'Créer un compte'}
         </button>
 
         <div className="divider">
@@ -175,19 +257,26 @@ function SignupForm() {
 
         <p className="signup-text">
           Vous avez déjà un compte ?{' '}
-          <Link to="/login" className="signup-link">
+
+          <Link
+            to="/login"
+            className="signup-link"
+          >
             Se connecter
           </Link>
         </p>
       </form>
 
+      {/* FOOTER */}
       <div className="login-footer">
         <p className="security-text">
           <FiShield className="security-icon" />
           Sécurité et confidentialité garanties
         </p>
+
         <p className="copyright-text">
-          &copy; {new Date().getFullYear()} OCP Group. Tous droits réservés.
+          &copy; {new Date().getFullYear()} OCP Group.
+          Tous droits réservés.
         </p>
       </div>
     </div>
