@@ -13,9 +13,10 @@ import reportRoutes from "./routes/reportRoutes.js";
 import teamRoutes from "./routes/teamRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -26,14 +27,13 @@ const app = express();
 const allowedOrigins = [
   "https://dashboard-projet-ocp-production-cd76.up.railway.app",
   "http://localhost:5173",
-  "http://localhost:5174",
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
       // Autoriser les requêtes sans origin
-      // (Postman, serveur, etc.)
+      // (ex: Postman, certains outils serveur)
       if (!origin) {
         return callback(null, true);
       }
@@ -42,12 +42,9 @@ app.use(
         return callback(null, true);
       }
 
-      console.log("❌ Origin CORS refusée :", origin);
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -69,10 +66,10 @@ app.get("/", (req, res) => {
   });
 });
 
-app.get("/health", (req, res) => {
+app.get("/api", (req, res) => {
   res.status(200).json({
     success: true,
-    message: "Backend OK",
+    message: "API OCP fonctionne",
   });
 });
 
@@ -88,41 +85,16 @@ app.use("/api/team", teamRoutes);
 app.use("/api/projects", projectRoutes);
 
 /* =========================
-   ERREUR 404
-========================= */
-
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route introuvable : ${req.method} ${req.originalUrl}`,
-  });
-});
-
-/* =========================
-   GESTION DES ERREURS
+   ERROR HANDLER
 ========================= */
 
 app.use((err, req, res, next) => {
   console.error("❌ ERREUR SERVEUR :", err);
 
-  if (err.message === "Not allowed by CORS") {
-    return res.status(403).json({
-      success: false,
-      message: "Origin non autorisée par CORS",
-    });
-  }
-
   res.status(500).json({
-    success: false,
-    message: "Erreur interne du serveur",
+    message: err.message || "Erreur serveur",
   });
 });
-
-/* =========================
-   CONNEXION MONGODB
-========================= */
-
-connectDB();
 
 /* =========================
    START SERVER
@@ -130,6 +102,21 @@ connectDB();
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Serveur démarré sur 0.0.0.0:${PORT}`);
-});
+const startServer = async () => {
+  try {
+    console.log("⏳ Connexion à MongoDB...");
+
+    await connectDB();
+
+    console.log("✅ MongoDB connecté");
+
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`🚀 Serveur démarré sur le port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("❌ Impossible de démarrer le serveur :", error);
+    process.exit(1);
+  }
+};
+
+startServer();
